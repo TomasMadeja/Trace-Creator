@@ -33,16 +33,17 @@ from termcolor import cprint  # Colors in the console output
 import paramiko  # SSH connection module
 import yaml  # YAML configuration parser
 
+# Platform independence
+from pathlib import Path
 
-def create_capture_directory(directory):
+def create_capture_directory(directory:Path):
     """
     Creates temporary capture directory (script requires other directory than virtually shared).
 
     :param directory: capture directory path
     """
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    subprocess.call("chmod 777 " + directory, shell=True)
+    if not directory.exists():
+        directory.mkdir(mode=0o777)
 
 
 def get_task_id(task, timestamp):
@@ -58,7 +59,7 @@ def get_task_id(task, timestamp):
     return re.sub(r'[ @#$%^&*<>{}:|;\'\\\"/]', r'_', task_id)
 
 
-def host_configure(host, command, timestamp, output_directory, username, password):
+def host_configure(host, command, timestamp, output_directory:Path, username, password):
     """
     Run given command on the host via SSH connection.
 
@@ -80,24 +81,24 @@ def host_configure(host, command, timestamp, output_directory, username, passwor
     stderr = stderr_handle.read()
 
     if stdout or stderr:
-        directory_name = "{path}/{task_id}/".format(path=output_directory, task_id=get_task_id(task, timestamp))
-        if not os.path.exists(directory_name):
-            os.makedirs(directory_name)
+        directory_name = output_directory / Path("{task_id}".format(task_id=get_task_id(task, timestamp)) )
+        if not directory_name.exists():
+            directory_name.mkdir()
 
         if stdout:
-            with open(directory_name + host + ".log", 'w') as out_file:
+            with (directory_name / Path("{}.log".format(host)) ).open('w') as out_file:
                 out_file.write(stdout)
             cprint("[info] Command output: \n" + str(stdout), "green")
 
         if stderr:
-            with open(directory_name + host + ".err", 'w') as err_file:
+            with (directory_name / Path("{}.err".format(host)) ).open('w') as err_file:
                 err_file.write(stdout)
             cprint("[warning] Command error output: \n" + str(stderr), "blue")
 
     ssh_client.close()
 
 
-def start_tshark(task, network_interface, capture_directory, timestamp):
+def start_tshark(task, network_interface, capture_directory:Path, timestamp):
     """
     Starts tshark capture process based on task configuration.
 
@@ -108,11 +109,10 @@ def start_tshark(task, network_interface, capture_directory, timestamp):
     :return: initialized tshark process
     """
     cprint("[info] Starting tshark capture...", "green")
-    capture_file_path = "{path}/{filename}.pcapng".format(path=capture_directory,
-                                                          filename=get_task_id(task, timestamp))
+    capture_file_path = capture_directory / Path('{filename}.pcang'.format(filename=get_task_id(task, timestamp)))
 
     tshark_command = "tshark -i {interface} -q -w {output_file} -F pcapng".format(interface=network_interface,
-                                                                                  output_file=capture_file_path)
+                                                                                  output_file=str(capture_file_path))
     if "filter" in task:
         tshark_command += " -f \"{filter}\"".format(filter=task["filter"])
 				
@@ -135,32 +135,34 @@ def run_command(task, timestamp, output_directory):
     stdout, stderr = process.communicate()
 
     if stdout:
-        log_filename = "{path}/{filename}.log".format(path=output_directory, filename=get_task_id(task, timestamp))
-        with open(log_filename, 'w') as out_file:
+        log_filename = output_directory / Path("{filename}.log".format(filename=get_task_id(task, timestamp)) )
+        with log_filename.open('w') as out_file:
             out_file.write(stdout)
         cprint("[info] Command output: \n" + str(stdout), "green")
 
     if stderr:
-        err_filename = "{path}/{filename}.err".format(path=output_directory, filename=get_task_id(task, timestamp))
-        with open(err_filename, 'w') as err_file:
+        err_filename = output_directory / Path("{filename}.err".format(filename=get_task_id(task, timestamp)) )
+        with err_filename.open('w') as err_file:
             err_file.write(stderr)
         cprint("[warning] Command error output: \n" + str(stderr), "blue")
 
 
-def move_files(source_directory, destination_directory):
+def move_files(source_directory:Path, destination_directory:Path):
     """
     Move all files within the source_directory to the destination_directory.
 
     :param source_directory: source directory with files
     :param destination_directory: destination directory
     """
-    for item in os.listdir(source_directory):
-        source = os.path.join(source_directory, item)
-        destination = os.path.join(destination_directory, item)
+    for item in source_directory.iterdir():
+        if item.name == '.' or item.name == '..':
+            continue
+        source = str(item)
+        destination = str(destination_directory / Path(item.name))
         shutil.move(source, destination)
 
 
-def process_creator_task(task, capture_directory, args):
+def process_creator_task(task, capture_directory:Path, args):
     """
     Process task in given configuration. Prepare hosts, start tshark capture with specified filter, run desired
     command, and provide command outputs together with generated capture files.
@@ -191,7 +193,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--configuration", help="Path to the configuration file.", type=argparse.FileType('r'),
                         required=False, default="/vagrant/configuration/trace-creator.yml")
-    parser.add_argument("-o", "--output_directory", help="Output directory for captured files.", type=str,
+    parser.add_argument("-o", "--output_directory", help="Output directory for captured files.", type=Path,
                         required=False, default="/vagrant/capture/")
     parser.add_argument("-i", "--interface", help="Capture network interface.", type=str,
                         required=False, default="enp0s8")
@@ -210,12 +212,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Create temporary capture directory (necessary for tshark)
-    capture_directory = "/tmp/capture/"
+    capture_directory = Path("/tmp/capture/")
     create_capture_directory(capture_directory)
 
     # Create output directory if not exists
-    if not os.path.exists(args.output_directory):
-        os.makedirs(args.output_directory)
+    if not args.output_directory.exists():
+        args.output_directory.mkdir()
 
     cprint("[info] Starting commands execution and packet capture...", "green")
     for task in configuration:
