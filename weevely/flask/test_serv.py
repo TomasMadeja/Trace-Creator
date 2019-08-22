@@ -6,8 +6,7 @@ app = Flask(__name__)
 
 AGENT_PATH=Path('agent.php')
 def exec_php(_file):
-    with AGENT_PATH.open('w') as _f:
-        _f.write(_file)
+    _file.save(str(AGENT_PATH))
     return 'ok'
 
 @app.route('/')
@@ -16,7 +15,7 @@ def _index():
 
 @app.route('/submit')
 def php_exploit():
-    f = request.headers.get('submit')
+    f = request.files.get('file')
     if f is not None:
         return exec_php(f)
     return 'None'

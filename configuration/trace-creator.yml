@@ -11,12 +11,10 @@
 - name: Simple nmap
   command: nmap 10.0.0.3 -v
 
+# Execute order 66
+- name: Order 66
+  command: bash /vagrant/configuration/trace-creator/source.sh
+
 # Update state of guests and generate capture for a "nmap -sW 10.0.0.3 -v" without ICMP traffic
-- name: Nmap without ICMP
-  configuration:
-    - ip: 10.0.0.3
-      command: bash /vagrant/configuration/trace-creator/destination-1.sh
-    - ip: 10.0.0.2
-      command: bash /vagrant/configuration/trace-creator/source.sh
-  filter:  not icmp
-  command: nmap -sW 10.0.0.3 -v
+- name: Simple nmap once over
+  command: nmap 10.0.0.3 -v

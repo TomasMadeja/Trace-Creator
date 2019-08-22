@@ -9,8 +9,8 @@
 - name: source
   # Select Vagrant guest virtual machine box.
   # You can search for boxes at https://atlas.hashicorp.com/search
-  box: ubuntu/bionic64
-  box_url: ubuntu/bionic64
+  box: ubuntu/trusty64
+  box_url: ubuntu/trusty64
   # Selected IP addresses should not exists in your current network
   ip: 10.0.0.2
   # Mask of the virtual private network
@@ -24,14 +24,14 @@
   # Ansible requirements file (to include external roles)
   ansible_requirements: null
   # Bash provision file
-  bash: null
+  bash: configuration/provision/bash/source.sh
   # Indicate if run trace-creator capture script.
   # Only one guest can have capture set to "true"! The guest will be deployed as last.
   creator: true
 
 - name: destination-1
-  box: ubuntu/bionic64
-  box_url: ubuntu/bionic64
+  box: ubuntu/trusty64
+  box_url: ubuntu/trusty64
   ip: 10.0.0.3
   mask: 255.255.255.0  
   cpu: 1
